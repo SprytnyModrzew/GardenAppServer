@@ -113,8 +113,6 @@ def login_check(login, password):
         return None
 
 
-
-
 @db_session
 def token_check(token):
     user = User.get(token=token)
@@ -153,9 +151,9 @@ def add_watch_event(token, id):
 
 
 @db_session
-def delete_watch_event(token, id):
+def delete_watch_event(token, event_id):
     user = User.get(token=token)
-    device = Device.get(id=id)
+    device = Device.get(id=event_id)
     x = WatchEvent.get(user=user, device=device, privilege_level=1)
     select(u for u in WatchEvent).show()
     if x is None:
@@ -164,6 +162,18 @@ def delete_watch_event(token, id):
     WatchEvent[x.id].delete()
     select(u for u in WatchEvent).show()
     return True
+
+
+@db_session
+def rename_device(token, event_id, new_name):
+    user = User.get(token=token)
+    device = Device.get(id=event_id)
+    x = WatchEvent.get(user=user, device=device, privilege_level=0)
+    if x is None:
+        return False
+    device.device_name = new_name
+    return True
+
 
 @db_session
 def add_user_unauthorized(login, password, email):

@@ -48,7 +48,7 @@ async def delete_event(request):
     token = request.get("user")
     data = await request.post()
 
-    if db.delete_watch_event(token=token, id=data['id']):
+    if db.delete_watch_event(token=token, event_id=data['id']):
         return web.Response(text="ok")
     else:
         return web.Response(text="not ok")
@@ -80,6 +80,17 @@ async def delete_watch_events(request):
     print(data)
     db.debug_delete_watch_events(data)
     return web.Response(text="done")
+
+
+@routes.post('/modify/device_name')
+async def modify_device_name(request):
+    token = request.get("user")
+    data = await request.post()
+    print(data)
+    if db.rename_device(token=token, event_id=data["id"], new_name=data["name"]):
+        return web.Response(text="ok")
+    else:
+        return web.Response(text="not ok")
 
 
 @routes.post('/login')
