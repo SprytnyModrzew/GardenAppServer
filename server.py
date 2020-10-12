@@ -1,11 +1,12 @@
 import base64
+import os
 
 from cryptography import fernet
 
 import db
 import hashlib
 import emails
-from aiohttp import web
+from aiohttp import web, MultipartWriter
 import json
 from aiohttp_tokenauth import token_auth_middleware
 from aiohttp_session import setup, get_session, session_middleware
@@ -13,6 +14,20 @@ from aiohttp_session.cookie_storage import EncryptedCookieStorage
 from aiohttp_session.redis_storage import RedisStorage
 
 routes = web.RouteTableDef()
+
+
+def get_pictures_list():
+    # https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory
+    import glob
+    glob_list = glob.glob("C:\\Users\\Modrzew\\PycharmProjects\\ProjectEngineer\\pictures\\*.jpg")
+    json_data = {"version": 1.0,
+                 "count": len(glob_list)}
+    list_ = [json_data, glob_list]
+    print(list_)
+    return list_
+
+
+list_data = get_pictures_list()
 
 
 @routes.post('/add/user')
@@ -125,6 +140,22 @@ async def doopa(request):
     return web.json_response(dic)
 
 
+@routes.get('/send/version')
+async def send_version(request):
+    print("woope")
+    return web.json_response(list_data[0])
+
+
+@routes.get('/send/picture/{number}')
+async def send_picture(request):
+    print("woop")
+    picture = request.match_info.get('number', 0)
+    print(picture)
+    file = open(list_data[1][int(picture)], 'rb')
+    print(file)
+    return web.Response(body=file, content_type="image/jpeg")
+
+
 async def user_verify(token: str):
     user = None
     if db.token_check(token):
@@ -133,14 +164,15 @@ async def user_verify(token: str):
 
 
 database = db.bind(True)
+
 # comment line below after creating database
-#db.define_all()
+# db.define_all()
 
 # x = db.json_pack()
 
 # db.show()
 # app = web.Application()
-excluded = ('/add/user', '/login', r'/confirm/.+')
+excluded = ('/add/user', '/login', r'/confirm/.+',r'/send/picture/.+')
 
 app = web.Application(middlewares=[
     token_auth_middleware(user_loader=user_verify, auth_scheme='Token', exclude_routes=excluded)])
