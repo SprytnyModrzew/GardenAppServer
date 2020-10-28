@@ -70,7 +70,6 @@ async def confirm_mail(request):
     else:
         return web.Response(text="not ok")
 
-
 @routes.get('/get/{get_relation}')
 async def get_category(request):
     # handling of new users - get all categories

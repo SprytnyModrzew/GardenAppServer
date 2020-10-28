@@ -211,6 +211,18 @@ def rename_device(token, event_id, new_name):
 
 
 @db_session
+def get_available_plants(token):
+    devices = (select(u.device.id for u in WatchEvent if
+                      u.user.token == token and (u.privilege_level == 0)))
+    # devices.show()
+    plants = (select(u for u in Plant for c in devices if c == u.device.id))
+
+    # plants.show()
+    x = json_pack(plants)
+    return json.dumps(x)
+
+
+@db_session
 def add_user_unauthorized(login, password, email):
     user = User.get(nickname=login)
     if user is not None:
@@ -232,13 +244,6 @@ def get_available_devices(token):
     devices1.show()
 
     return devices1.to_json(with_schema=False)
-
-
-@db_session
-def get_owned_devices(token):
-    devices1 = (select((u.device.id, u.device.device_name, u.privilege_level) for u in WatchEvent if
-                       u.user.token == token and (u.privilege_level == 0)))
-    return devices1
 
 
 def json_pack(data):
@@ -266,12 +271,6 @@ def bind(create_db=False):
         db.bind(provider='sqlite', filename='database.db', create_db=False)
         db.generate_mapping()
     return db
-
-@db_session
-def get_available_plants(token):
-    devices = get_owned_devices(token)
-    plants = (select(u for u in Plant if Plant.device in devices))
-    return plants.to_json(with_schema=False)
 
 
 class Getter:

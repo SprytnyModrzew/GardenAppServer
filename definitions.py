@@ -31,12 +31,12 @@ functions = {
 params = [
 
     {
-        "name": "tomato",
+        "name": "Tomato",
         "species": ["Grape", "Red Beefsteak", "Green Beefsteak", "Cherry", "Cocktail", "Roma", "Heirloom", "Vine"],
         "default_image": 2,
         "default_water_level": 0
     }, {
-        "name": "potato",
+        "name": "Potato",
         "species": ["Russet", "Jewel Yam", "Japanese Sweet", "Hannah Sweet", "Rose Finn Apple", "Russian Banana",
                     "Red Thumb",
                     "French Fingerling", "LaRette", "Austrian Crescent", "Red Gold", "Purple Majesty", "Norland Red",
