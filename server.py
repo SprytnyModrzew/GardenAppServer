@@ -1,17 +1,10 @@
-import base64
-import os
+import hashlib
 
-from cryptography import fernet
+from aiohttp import web
+from aiohttp_tokenauth import token_auth_middleware
 
 import db
-import hashlib
 import emails
-from aiohttp import web, MultipartWriter
-import json
-from aiohttp_tokenauth import token_auth_middleware
-from aiohttp_session import setup, get_session, session_middleware
-from aiohttp_session.cookie_storage import EncryptedCookieStorage
-from aiohttp_session.redis_storage import RedisStorage
 
 routes = web.RouteTableDef()
 
@@ -19,7 +12,7 @@ routes = web.RouteTableDef()
 def get_pictures_list():
     # https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory
     import glob
-    glob_list = glob.glob("C:\\Users\\Modrzew\\PycharmProjects\\ProjectEngineer\\pictures\\*.jpg")
+    glob_list = glob.glob("C:\\Users\\Modrzew\\PycharmProjects\\ProjectEngineer\\pictures\\*.png")
     json_data = {"version": 1.0,
                  "count": len(glob_list)}
     list_ = [json_data, glob_list]
@@ -112,6 +105,7 @@ async def modify_device_name(request):
 async def login(request):
     # logging of the user
     data = await request.post()
+    print("logging")
     try:
         x = db.login_check(data["login"], hashlib.sha3_256(data["password"].encode()).hexdigest())
         dic = {"token": x}
@@ -142,8 +136,13 @@ async def doopa(request):
 
 @routes.get('/send/version')
 async def send_version(request):
-    print("woope")
+    print("woeoo")
     return web.json_response(list_data[0])
+
+@routes.get('/send/default_definitions')
+async def send_definitions(request):
+    x = db.get_definitions()
+    return web.json_response(x)
 
 
 @routes.get('/send/picture/{number}')

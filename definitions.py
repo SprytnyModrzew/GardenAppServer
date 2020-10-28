@@ -5,7 +5,7 @@ class Plant:
 
 def get_tomatoes():
     tomatoes = ["Grape", "Red Beefsteak", "Green Beefsteak", "Cherry", "Cocktail", "Roma", "Heirloom", "Vine"]
-    tomatoes = ["Ree","Woo"]
+    tomatoes = ["Ree", "Woo"]
     for i in tomatoes:
         yield i
 
@@ -15,7 +15,7 @@ def get_potatoes():
                 "Red Thumb",
                 "French Fingerling", "LaRette", "Austrian Crescent", "Red Gold", "Purple Majesty", "Norland Red",
                 "Yukon Gold", "Kennebec", "All Blue"]
-    potatoes = ["Woo","Goo"]
+    potatoes = ["Woo", "Goo"]
     for i in potatoes:
         yield i
 
@@ -28,17 +28,20 @@ functions = {
     "tomato": get_tomatoes(),
     "potato": get_potatoes()
 }
-params = {
-    "tomato": {
-        "default_water": 3,
-        "sprout": 10,
-        "fruit": 50,
-        "fertilize": 14
-    },
-    "potato": {
-        "default_water": 2,
-        "sprout": 16,
-        "fruit": 42,
-        "fertilize": 28
+params = [
+
+    {
+        "name": "tomato",
+        "species": ["Grape", "Red Beefsteak", "Green Beefsteak", "Cherry", "Cocktail", "Roma", "Heirloom", "Vine"],
+        "default_image": 2,
+        "default_water_level": 0
+    }, {
+        "name": "potato",
+        "species": ["Russet", "Jewel Yam", "Japanese Sweet", "Hannah Sweet", "Rose Finn Apple", "Russian Banana",
+                    "Red Thumb",
+                    "French Fingerling", "LaRette", "Austrian Crescent", "Red Gold", "Purple Majesty", "Norland Red",
+                    "Yukon Gold", "Kennebec", "All Blue"],
+        "default_image": 1,
+        "default_water_level": 0
     }
-}
+]

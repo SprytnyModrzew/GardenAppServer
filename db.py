@@ -14,23 +14,17 @@ class Device(db.Entity):
     device_name = Required(str)
     plants = Set('Plant')
     watch_events = Set('WatchEvent')
+    url = Required(str)
+    max_plants = Required(int)
 
 
 class Plant(db.Entity):
     id = PrimaryKey(int, auto=True)
     device = Required(Device)
     water_level = Optional(int)
-    water_time = Optional(datetime)
-    measurements = Set('Measurements')
-    plant_category = Required('PlantCategory')
-    plant_time = Required(date)
-
-
-class PlantType(db.Entity):
-    id = PrimaryKey(int, auto=True)
-    plant_categories = Set('PlantCategory')
-    name = Required(str)
-    default_water = Required(int)
+    measurements = Set('Measurement')
+    plant_category = Required('PlantSubDefault')
+    water_time = Required(str)
 
 
 class User(db.Entity):
@@ -43,23 +37,19 @@ class User(db.Entity):
     email = Required(str)
 
 
-class Measurements(db.Entity):
+class Measurement(db.Entity):
     id = PrimaryKey(int, auto=True)
     plants = Required(Plant)
-    humidity = Required(float)
-    temperature = Required(float)
-    water_level = Required(float)
     time_of_measure = Required(datetime)
+    measurement = Required(float)
+    name_of_sensor = Required(str)
 
 
-class PlantCategory(db.Entity):
+class PlantSubDefault(db.Entity):
     id = PrimaryKey(int, auto=True)
-    plant_type = Required(PlantType)
     plants = Set(Plant)
     subname = Required(str)
-    fertilize_time_days = Required(int)
-    sprout_time_days = Required(int)
-    fruit_time_days = Required(int)
+    plant_default = Required('PlantDefault')
 
 
 class WatchEvent(db.Entity):
@@ -69,33 +59,45 @@ class WatchEvent(db.Entity):
     privilege_level = Required(int)
 
 
+class PlantDefault(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    name = Required(str)
+    plant_sub_defaults = Set(PlantSubDefault)
+    default_image = Optional(int)
+    default_water_level = Required(int)
+
+
+@db_session
+def get_plants(hour):
+    plants = Plant.get(water_time=hour)
+    return plants
+
+
 @db_session
 def define_all():
-    for i in definitions.names:
-        print(i)
-        category = PlantType(name=definitions.names[i], default_water=definitions.params[i]["default_water"])
-        veg_generator = definitions.functions[i]
-        try:
-            while True:
-                PlantCategory(subname=veg_generator.__next__(), plant_type=category,
-                              fertilize_time_days=definitions.params[i]["fertilize"],
-                              sprout_time_days=definitions.params[i]["sprout"],
-                              fruit_time_days=definitions.params[i]["fruit"])
-        except StopIteration:
-            pass
+    for d in definitions.params:
+        PlantDefault(name=d["name"], default_image=d["default_image"], default_water_level=d["default_water_level"])
+        for plant in d["species"]:
+            PlantSubDefault(subname=plant,
+                            plant_default=PlantDefault.get(name=d["name"]))
 
     u1 = User(nickname="superszpital", password=hashlib.sha3_256(b"valerie").hexdigest(),
               token=secrets.token_urlsafe(32), authorized=True, email="20300")
     u2 = User(nickname="niesuperjarek", password=hashlib.sha3_256(b"penis").hexdigest(),
               token=secrets.token_urlsafe(32), authorized=True, email="2000")
 
-    d1 = Device(device_name="RK9")
-    d2 = Device(device_name="1337")
-    d3 = Device(device_name="Choinka")
-    d4 = Device(device_name="Presto")
+    d1 = Device(device_name="RK9", url="https://webhook.site/026a4573-65c6-4b1e-8740-6c8a12a67a31", max_plants=3)
+    d2 = Device(device_name="1337", url="https://webhook.site/026a4573-65c6-4b1e-8740-6c8a12a67a31", max_plants=1)
+    d3 = Device(device_name="Choinka", url="https://webhook.site/026a4573-65c6-4b1e-8740-6c8a12a67a31", max_plants=2)
+    d4 = Device(device_name="Presto", url="https://webhook.site/026a4573-65c6-4b1e-8740-6c8a12a67a31", max_plants=1)
+
+    p1 = Plant(device=d1, water_level=0, plant_category=PlantSubDefault.get(id=3), water_time="19:30")
+    p2 = Plant(device=d1, water_level=0, plant_category=PlantSubDefault.get(id=1), water_time="19:30")
+    p3 = Plant(device=d2, water_level=0, plant_category=PlantSubDefault.get(id=2), water_time="19:30")
+    p4 = Plant(device=d1, water_level=0, plant_category=PlantSubDefault.get(id=4), water_time="19:30")
 
     WatchEvent(device=d1, user=u1, privilege_level=0)
-    WatchEvent(device=d2, user=u2, privilege_level=0)
+    WatchEvent(device=d2, user=u1, privilege_level=0)
     WatchEvent(device=d3, user=u2, privilege_level=0)
     WatchEvent(device=d4, user=u2, privilege_level=0)
     print("woop")
@@ -114,6 +116,32 @@ def login_check(login, password):
 
 
 @db_session
+def get_definitions():
+    def_list = list(select(u for u in PlantDefault))
+    def2_list = list(select(u for u in PlantSubDefault))
+    ret_list = []
+    for plant in def_list:
+        ret_list.append(
+            {
+                "name": plant.name,
+                "species": [i.subname for i in def2_list],
+                "default_image": plant.default_image,
+                "default_water_level": plant.default_water_level
+            }
+        )
+    return ret_list
+
+
+@db_session
+def add_measurement(device_id, plant_id, time_of_measure, measurement):
+    device = Device.get(id=device_id)
+    plant = Plant.get(id=plant_id, device=device)
+    if plant is None:
+        return
+    Measurement(plant=plant, time_of_measure=time_of_measure, measurement=measurement)
+
+
+@db_session
 def token_check(token):
     user = User.get(token=token)
 
@@ -122,9 +150,16 @@ def token_check(token):
 
 
 @db_session
-def get_all_plant_categories():
-    plants = (select(u for u in PlantCategory))
+def get_all_plant_defaults():
+    plants = (select(u for u in PlantDefault))
     return json_pack(plants)
+
+
+@db_session
+def get_all_devices():
+    device = list(select(u for u in Device))
+    for d in device:
+        yield d
 
 
 @db_session
@@ -199,6 +234,13 @@ def get_available_devices(token):
     return devices1.to_json(with_schema=False)
 
 
+@db_session
+def get_owned_devices(token):
+    devices1 = (select((u.device.id, u.device.device_name, u.privilege_level) for u in WatchEvent if
+                       u.user.token == token and (u.privilege_level == 0)))
+    return devices1
+
+
 def json_pack(data):
     result = {'data': [p.to_dict() for p in data]}
     return result
@@ -207,8 +249,8 @@ def json_pack(data):
 @db_session
 def show():
     # print(select(u for u in PlantType).show())
-    print(select(u for u in PlantCategory).show())
-    print(select(p for p in PlantCategory if p.plant_type.name == definitions.names["tomato"]).show())
+    print(select(u for u in PlantDefault).show())
+    print(select(p for p in PlantDefault if p.plant_type.name == definitions.names["tomato"]).show())
 
 
 @db_session
@@ -225,11 +267,18 @@ def bind(create_db=False):
         db.generate_mapping()
     return db
 
+@db_session
+def get_available_plants(token):
+    devices = get_owned_devices(token)
+    plants = (select(u for u in Plant if Plant.device in devices))
+    return plants.to_json(with_schema=False)
+
 
 class Getter:
     def __init__(self, token):
         self.token = token
         self.category = {
-            "plant_categories": get_all_plant_categories(),
-            "devices": get_available_devices(token)
+            "plant_categories": get_all_plant_defaults(),
+            "devices": get_available_devices(token),
+            "plants": get_available_plants(token)
         }
