@@ -20,6 +20,7 @@ class Device(db.Entity):
 
 class Plant(db.Entity):
     id = PrimaryKey(int, auto=True)
+    name = Required(str)
     device = Required(Device)
     water_level = Optional(int)
     measurements = Set('Measurement')
@@ -91,10 +92,10 @@ def define_all():
     d3 = Device(device_name="Choinka", url="https://webhook.site/026a4573-65c6-4b1e-8740-6c8a12a67a31", max_plants=2)
     d4 = Device(device_name="Presto", url="https://webhook.site/026a4573-65c6-4b1e-8740-6c8a12a67a31", max_plants=1)
 
-    p1 = Plant(device=d1, water_level=0, plant_category=PlantSubDefault.get(id=3), water_time="19:30")
-    p2 = Plant(device=d1, water_level=0, plant_category=PlantSubDefault.get(id=1), water_time="19:30")
-    p3 = Plant(device=d2, water_level=0, plant_category=PlantSubDefault.get(id=2), water_time="19:30")
-    p4 = Plant(device=d1, water_level=0, plant_category=PlantSubDefault.get(id=4), water_time="19:30")
+    p1 = Plant(device=d1,name="puszka", water_level=0, plant_category=PlantSubDefault.get(id=3), water_time="19:30")
+    p2 = Plant(device=d1,name="balkon", water_level=0, plant_category=PlantSubDefault.get(id=1), water_time="19:30")
+    p3 = Plant(device=d2,name="piwnica", water_level=0, plant_category=PlantSubDefault.get(id=2), water_time="19:30")
+    p4 = Plant(device=d1,name="jezioro", water_level=0, plant_category=PlantSubDefault.get(id=4), water_time="19:30")
 
     WatchEvent(device=d1, user=u1, privilege_level=0)
     WatchEvent(device=d2, user=u1, privilege_level=0)
@@ -118,9 +119,10 @@ def login_check(login, password):
 @db_session
 def get_definitions():
     def_list = list(select(u for u in PlantDefault))
-    def2_list = list(select(u for u in PlantSubDefault))
     ret_list = []
+
     for plant in def_list:
+        def2_list = list(select(u for u in PlantSubDefault if u.plant_default == plant))
         ret_list.append(
             {
                 "name": plant.name,

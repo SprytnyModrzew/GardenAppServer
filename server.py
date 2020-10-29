@@ -141,6 +141,7 @@ async def send_version(request):
 @routes.get('/send/default_definitions')
 async def send_definitions(request):
     x = db.get_definitions()
+    print(x)
     return web.json_response(x)
 
 
@@ -164,7 +165,7 @@ async def user_verify(token: str):
 database = db.bind(True)
 
 # comment line below after creating database
-# db.define_all()
+db.define_all()
 
 # x = db.json_pack()
 
