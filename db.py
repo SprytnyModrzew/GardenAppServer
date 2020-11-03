@@ -88,14 +88,14 @@ def define_all():
               token=secrets.token_urlsafe(32), authorized=True, email="2000")
 
     d1 = Device(device_name="RK9", url="https://webhook.site/026a4573-65c6-4b1e-8740-6c8a12a67a31", max_plants=3)
-    d2 = Device(device_name="1337", url="https://webhook.site/026a4573-65c6-4b1e-8740-6c8a12a67a31", max_plants=1)
+    d2 = Device(device_name="1337", url="https://webhook.site/026a4573-65c6-4b1e-8740-6c8a12a67a31", max_plants=2)
     d3 = Device(device_name="Choinka", url="https://webhook.site/026a4573-65c6-4b1e-8740-6c8a12a67a31", max_plants=2)
     d4 = Device(device_name="Presto", url="https://webhook.site/026a4573-65c6-4b1e-8740-6c8a12a67a31", max_plants=1)
 
-    p1 = Plant(device=d1,name="puszka", water_level=0, plant_category=PlantSubDefault.get(id=3), water_time="19:30")
-    p2 = Plant(device=d1,name="balkon", water_level=0, plant_category=PlantSubDefault.get(id=1), water_time="19:30")
-    p3 = Plant(device=d2,name="piwnica", water_level=0, plant_category=PlantSubDefault.get(id=2), water_time="19:30")
-    p4 = Plant(device=d1,name="jezioro", water_level=0, plant_category=PlantSubDefault.get(id=4), water_time="19:30")
+    p1 = Plant(device=d1, name="puszka", water_level=0, plant_category=PlantSubDefault.get(id=3), water_time="19:30")
+    p2 = Plant(device=d1, name="balkon", water_level=0, plant_category=PlantSubDefault.get(id=1), water_time="19:30")
+    p3 = Plant(device=d2, name="piwnica", water_level=0, plant_category=PlantSubDefault.get(id=2), water_time="19:30")
+    p4 = Plant(device=d1, name="jezioro", water_level=0, plant_category=PlantSubDefault.get(id=4), water_time="19:30")
 
     WatchEvent(device=d1, user=u1, privilege_level=0)
     WatchEvent(device=d2, user=u1, privilege_level=0)
@@ -149,6 +149,26 @@ def token_check(token):
 
     print(select(u.token for u in User))
     return True if user is not None else False
+
+
+@db_session
+def add_plant(token, device_id, plant_id, desired_name, desired_water_level, desired_water_time):
+    x = Device.get(id=device_id)
+    print(token)
+    print(device_id)
+    print(desired_name)
+    print(plant_id)
+    print(desired_water_level)
+    print(desired_water_time)
+    watch_event = WatchEvent.get(user=User.get(token=token), privilege_level=0, device=x)
+    if watch_event is None:
+        return False
+    plant_sub = PlantSubDefault.get(subname=plant_id)
+    plant = Plant(device=x, name=desired_name, water_level=desired_water_level, plant_category=plant_sub,
+                  water_time=desired_water_time)
+    if plant is None:
+        return False
+    return True
 
 
 @db_session
@@ -241,8 +261,9 @@ def add_user_unauthorized(login, password, email):
 @db_session
 def get_available_devices(token):
     # todo this
-    devices1 = (select((u.device.id, u.device.device_name, u.privilege_level) for u in WatchEvent if
-                       u.user.token == token and (u.privilege_level == 0 or u.privilege_level == 1)))
+    devices1 = (
+        select((u.device.id, u.device.device_name, u.privilege_level, u.device.max_plants) for u in WatchEvent if
+               u.user.token == token and (u.privilege_level == 0 or u.privilege_level == 1)))
     devices1.show()
 
     return devices1.to_json(with_schema=False)

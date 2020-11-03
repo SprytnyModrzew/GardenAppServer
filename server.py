@@ -144,6 +144,21 @@ async def send_definitions(request):
     print(x)
     return web.json_response(x)
 
+@routes.post('/add/plant')
+async def add_plant(request):
+    data = await request.post()
+    token = request.get("user")
+    x = db.add_plant(token=token,
+                     desired_name=data["name"],
+                     desired_water_level=data["water_level"],
+                     desired_water_time=data["water_time"],
+                     device_id=data["device_id"],
+                     plant_id=data["plant_id"]
+                     )
+    if not x:
+        return web.Response(text="not good")
+
+    return web.Response(text="good")
 
 @routes.get('/send/picture/{number}')
 async def send_picture(request):
