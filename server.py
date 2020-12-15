@@ -1,4 +1,5 @@
 import hashlib
+import json
 
 from aiohttp import web
 from aiohttp_tokenauth import token_auth_middleware
@@ -70,6 +71,17 @@ async def confirm_mail(request):
     else:
         return web.Response(text="not ok")
 
+
+# done with post to have arguments in Android
+@routes.post('/send/measurements')
+async def get_measurements(request):
+    token = request.get("user")
+    data = await request.post()
+    print(i for i in data)
+    x = db.get_measurements(token=token, plant_id=data['plant_id'])
+    return web.Response(text=json.dumps(x, default=str))
+
+
 @routes.get('/get/{get_relation}')
 async def get_category(request):
     # handling of new users - get all categories
@@ -138,11 +150,13 @@ async def send_version(request):
     print("woeoo")
     return web.json_response(list_data[0])
 
+
 @routes.get('/send/default_definitions')
 async def send_definitions(request):
     x = db.get_definitions()
     print(x)
     return web.json_response(x)
+
 
 @routes.post('/add/plant')
 async def add_plant(request):
@@ -159,6 +173,18 @@ async def add_plant(request):
         return web.Response(text="not good")
 
     return web.Response(text="good")
+
+
+@routes.post('/add/device')
+async def add_device(request):
+    data = await request.post()
+    token = request.get("user")
+    x = db.add_device(token=token, device_name=data["name"], url=data["url"], max_plants=data["slots"])
+    if x:
+        return web.Response(text="good")
+    else:
+        return web.Response(text="not good")
+
 
 @routes.get('/send/picture/{number}')
 async def send_picture(request):
@@ -180,13 +206,13 @@ async def user_verify(token: str):
 database = db.bind(True)
 
 # comment line below after creating database
-db.define_all()
+# db.define_all()
 
 # x = db.json_pack()
 
 # db.show()
 # app = web.Application()
-excluded = ('/add/user', '/login', r'/confirm/.+',r'/send/picture/.+')
+excluded = ('/add/user', '/login', r'/confirm/.+', r'/send/picture/.+')
 
 app = web.Application(middlewares=[
     token_auth_middleware(user_loader=user_verify, auth_scheme='Token', exclude_routes=excluded)])

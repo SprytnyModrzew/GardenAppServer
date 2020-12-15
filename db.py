@@ -26,6 +26,7 @@ class Plant(db.Entity):
     measurements = Set('Measurement')
     plant_category = Required('PlantSubDefault')
     water_time = Required(str)
+    water_days = Required(str)
 
 
 class User(db.Entity):
@@ -40,7 +41,7 @@ class User(db.Entity):
 
 class Measurement(db.Entity):
     id = PrimaryKey(int, auto=True)
-    plants = Required(Plant)
+    plant = Required(Plant)
     time_of_measure = Required(datetime)
     measurement = Required(float)
     name_of_sensor = Required(str)
@@ -69,6 +70,18 @@ class PlantDefault(db.Entity):
 
 
 @db_session
+def add_measure(device_id, plant_id, value_of_measure, sensor_name):
+    plant = Plant.get(id=plant_id)
+    from datetime import datetime
+
+    now = datetime.now()
+    if plant is None:
+        return False
+    Measurement(plant=plant, measurement=value_of_measure, name_of_sensor=sensor_name, time_of_measure=now)
+    print("poszlo")
+
+
+@db_session
 def get_plants(hour):
     plants = Plant.get(water_time=hour)
     return plants
@@ -92,10 +105,14 @@ def define_all():
     d3 = Device(device_name="Choinka", url="https://webhook.site/026a4573-65c6-4b1e-8740-6c8a12a67a31", max_plants=2)
     d4 = Device(device_name="Presto", url="https://webhook.site/026a4573-65c6-4b1e-8740-6c8a12a67a31", max_plants=1)
 
-    p1 = Plant(device=d1, name="puszka", water_level=0, plant_category=PlantSubDefault.get(id=3), water_time="19:30")
-    p2 = Plant(device=d1, name="balkon", water_level=0, plant_category=PlantSubDefault.get(id=1), water_time="19:30")
-    p3 = Plant(device=d2, name="piwnica", water_level=0, plant_category=PlantSubDefault.get(id=2), water_time="19:30")
-    p4 = Plant(device=d1, name="jezioro", water_level=0, plant_category=PlantSubDefault.get(id=4), water_time="19:30")
+    p1 = Plant(device=d1, name="puszka", water_level=0, plant_category=PlantSubDefault.get(id=3), water_time="21:30",
+               water_days="134")
+    p2 = Plant(device=d1, name="balkon", water_level=0, plant_category=PlantSubDefault.get(id=1), water_time="21:30",
+               water_days="134")
+    p3 = Plant(device=d2, name="piwnica", water_level=0, plant_category=PlantSubDefault.get(id=2), water_time="21:30",
+               water_days="152")
+    p4 = Plant(device=d1, name="jezioro", water_level=0, plant_category=PlantSubDefault.get(id=4), water_time="21:30",
+               water_days="14")
 
     WatchEvent(device=d1, user=u1, privilege_level=0)
     WatchEvent(device=d2, user=u1, privilege_level=0)
@@ -152,7 +169,7 @@ def token_check(token):
 
 
 @db_session
-def add_plant(token, device_id, plant_id, desired_name, desired_water_level, desired_water_time):
+def add_plant(token, device_id, plant_id, desired_name, desired_water_level, desired_water_time, desired_water_days):
     x = Device.get(id=device_id)
     print(token)
     print(device_id)
@@ -165,7 +182,7 @@ def add_plant(token, device_id, plant_id, desired_name, desired_water_level, des
         return False
     plant_sub = PlantSubDefault.get(subname=plant_id)
     plant = Plant(device=x, name=desired_name, water_level=desired_water_level, plant_category=plant_sub,
-                  water_time=desired_water_time)
+                  water_time=desired_water_time, water_days=desired_water_days)
     if plant is None:
         return False
     return True
@@ -185,6 +202,14 @@ def get_all_devices():
 
 
 @db_session
+def get_devices_to_water(hour, day):
+    device = list(select(u.device for u in Plant if day in u.water_days and hour == u.water_time))
+    print(device)
+    for d in device:
+        yield d
+
+
+@db_session
 def confirm_mail(token):
     user = User.get(token=token)
     if user is not None:
@@ -192,6 +217,8 @@ def confirm_mail(token):
         return True
     else:
         return False
+
+
 
 
 @db_session
@@ -241,7 +268,26 @@ def get_available_plants(token):
 
     # plants.show()
     x = json_pack(plants)
+    print(json.dumps(x))
     return json.dumps(x)
+
+@db_session
+def get_plants_of_device(device_id):
+    device = Device.get(id=device_id)
+    # device.show()
+    plants = (select(u for u in Plant if device.id == u.device.id))
+    x = json_pack(plants)
+    print(json.dumps(x))
+    return x
+
+@db_session
+def add_device(token, device_name, url, max_plants):
+    user = User.get(token=token)
+    if user is None:
+        return False
+    d1 = Device(device_name=device_name, url=url, max_plants=max_plants)
+    WatchEvent(user=user, device=d1, privilege_level=0)
+    return True
 
 
 @db_session
@@ -272,6 +318,28 @@ def get_available_devices(token):
 def json_pack(data):
     result = {'data': [p.to_dict() for p in data]}
     return result
+
+
+@db_session
+def get_measurements(token, plant_id):
+    plant = Plant.get(id=plant_id)
+    print("donenene")
+    # x = (select(p for p in Plant if plant in (select(u.device.plants for u in WatchEvent if
+    #                                                 u.user.token == token)) and plant == p))
+    x = Measurement.select(lambda p: p.plant in (select(u.device.plants for u in WatchEvent if
+                                                        u.user.token == token)))
+    y = select(p.name_of_sensor for p in x)
+    x.show()
+    y.show()
+
+    z = []
+    for i in list(y):
+        z.append(select(p for p in Measurement if p in x if p.name_of_sensor == i).order_by(
+            desc(Measurement.time_of_measure)).first())
+    print(z)
+
+    print(plant.name for plant in x)
+    return json_pack(z)
 
 
 @db_session

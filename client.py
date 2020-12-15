@@ -16,12 +16,9 @@ async def main():
             print(text)
             header = {'Authorization': 'Token ' + text}
     async with aiohttp.ClientSession(headers=header) as session:
-        async with session.get("http://192.168.1.151:8080/send/picture/1") as r:
-            file = open("C:\\Users\\Modrzew\\PycharmProjects\\ProjectEngineer\\pictures\\me23.jpg", 'wb')
-            file.write(await r.read())
-    async with aiohttp.ClientSession(headers=header) as session:
-        async with session.get("http://192.168.1.151:8080/send/version") as r:
-            print(await r.text())
+        async with session.post("http://192.168.1.151:8080/send/measures") as r:
+            pass
+
     '''async with aiohttp.ClientSession(headers=header) as session:
         datas = {"login": "Wojciecssh", "password": "penis", "email": "@gmail.com"}
         async with session.post('http://192.168.1.151:8080/add/user', data=datas) as r:
