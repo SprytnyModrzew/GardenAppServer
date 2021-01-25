@@ -32,7 +32,10 @@ async def add_user(request):
         password = hashlib.sha3_256(data["password"].encode()).hexdigest()
         token = db.add_user_unauthorized(login=data['login'], password=password, email=data['email'])
         if token:
-            emails.send_mail(address_to=data['email'], token=token, nick=data['login'])
+            try:
+                emails.send_mail(address_to=data['email'], token=token, nick=data['login'])
+            except Exception:
+                pass
             return web.Response(text="ok")
         else:
             return web.Response(text="not ok")
@@ -58,6 +61,27 @@ async def delete_event(request):
     data = await request.post()
 
     if db.delete_watch_event(token=token, event_id=data['id']):
+        return web.Response(text="ok")
+    else:
+        return web.Response(text="not ok")
+
+@routes.post('/delete/plant')
+async def delete_event(request):
+    token = request.get("user")
+    data = await request.post()
+
+    if db.delete_plant(token=token, plant_id=data['plant_id'], device_id=data['device_id']):
+        return web.Response(text="ok")
+    else:
+        return web.Response(text="not ok")
+
+
+@routes.post('/delete/device')
+async def delete_event(request):
+    token = request.get("user")
+    data = await request.post()
+
+    if db.delete_device(token=token, device_id=data['device_id']):
         return web.Response(text="ok")
     else:
         return web.Response(text="not ok")
@@ -162,12 +186,14 @@ async def send_definitions(request):
 async def add_plant(request):
     data = await request.post()
     token = request.get("user")
+    print(data["water_time"])
     x = db.add_plant(token=token,
                      desired_name=data["name"],
                      desired_water_level=data["water_level"],
                      desired_water_time=data["water_time"],
                      device_id=data["device_id"],
-                     plant_id=data["plant_id"]
+                     plant_id=data["plant_id"],
+                     desired_water_days=data["water_days"]
                      )
     if not x:
         return web.Response(text="not good")

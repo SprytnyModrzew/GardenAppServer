@@ -1,13 +1,13 @@
 import asyncio
 import json
-import threading
+
+from json import JSONDecodeError
 
 import schedule
 import time
-import queue
 
 import aiohttp
-import datetime
+
 import db
 
 # scheduled hours
@@ -27,9 +27,34 @@ async def device_notifier():
     generator = db.get_all_devices()
     print("woop")
     for device in generator:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(device.url+"/info") as r:
-                pass
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(device.url + "/info") as r:
+                    try:
+                        text = await r.text()
+                        plant = db.get_plants_of_device(device.id)["data"]
+                        print("plant")
+                        print(plant[0])
+
+                        print("na dole to tekst")
+                        print(text)
+                        json_text = json.loads(text)
+                        counter = 0
+                        for i in json_text:
+                            for x in i:
+                                print(i)
+                                db.add_measure(device_id=device.id, plant_id=plant[counter]["id"],value_of_measure=i[x], sensor_name=x)
+                            counter = counter + 1
+
+                        print(json_text)
+                    except JSONDecodeError:
+                        print(r)
+                    except IndexError:
+                        print("nope")
+        except Exception:
+            print("somethin wrong with")
+            print(device.url)
+
     await asyncio.sleep(2)
 
 
@@ -42,14 +67,15 @@ async def water_notify(hour, day):
         print(device.id)
         print(device.device_name)
         print(plant["data"][counter]["water_level"])
-        for _ in plant["data"]:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(device.url+"/pump/on/"+str(counter)+"/"+plant["data"][counter]["water_level"]) as r:
-                    text = await r.text()
-                    json_text = json.loads(text)
-                    print(json_text)
-                    db.add_measure(device.id, plant["data"][counter]["id"], 23, "233")
-            counter = counter+1
+
+        for p in plant["data"]:
+            if p["water_time"] == hour and day in p["water_days"]:
+                print("podlalo")
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(device.url + "/pump/on/" + str(counter) + "/" + str(plant["data"][counter]["water_level"])) as r:
+                        pass
+            counter = counter + 1
+
 
 def device_water_notifier(hour, day):
     loop = asyncio.get_event_loop()

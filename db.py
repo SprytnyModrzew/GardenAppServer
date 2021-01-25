@@ -189,6 +189,29 @@ def add_plant(token, device_id, plant_id, desired_name, desired_water_level, des
 
 
 @db_session
+def delete_plant(token, plant_id, device_id):
+    x = Device.get(id=device_id)
+
+    plant = Plant.get(id=plant_id)
+    watch_event = WatchEvent.get(user=User.get(token=token), privilege_level=0, device=x)
+    if watch_event is None:
+        return False
+    plant.delete()
+    return True
+
+
+@db_session
+def delete_device(token, device_id):
+    x = Device.get(id=device_id)
+    print(device_id)
+    watch_event = WatchEvent.get(user=User.get(token=token), privilege_level=0, device=x)
+    if watch_event is None:
+        return False
+    x.delete()
+    return True
+
+
+@db_session
 def get_all_plant_defaults():
     plants = (select(u for u in PlantDefault))
     return json_pack(plants)
@@ -262,7 +285,7 @@ def rename_device(token, event_id, new_name):
 @db_session
 def get_available_plants(token):
     devices = (select(u.device.id for u in WatchEvent if
-                      u.user.token == token and (u.privilege_level == 0)))
+                      u.user.token == token))
     # devices.show()
     plants = (select(u for u in Plant for c in devices if c == u.device.id))
 
@@ -276,6 +299,10 @@ def get_plants_of_device(device_id):
     device = Device.get(id=device_id)
     # device.show()
     plants = (select(u for u in Plant if device.id == u.device.id))
+    try:
+        plants = plants.order_by(device.id)
+    except IndexError:
+        pass
     x = json_pack(plants)
     print(json.dumps(x))
     return x
@@ -298,8 +325,8 @@ def add_user_unauthorized(login, password, email):
     user = User.get(email=email)
     if user is not None:
         return False
-    x = secrets.token_urlsafe(32)
-    User(nickname=login, password=password, email=email, authorized=False, token=x)
+    x = login+secrets.token_urlsafe(32)
+    User(nickname=login, password=password, email=email, authorized=True, token=x)
     select(u for u in User).show()
     return x
 
@@ -334,7 +361,7 @@ def get_measurements(token, plant_id):
 
     z = []
     for i in list(y):
-        z.append(select(p for p in Measurement if p in x if p.name_of_sensor == i).order_by(
+        z.append(select(p for p in Measurement if p in x if p.name_of_sensor == i and p.plant == plant).order_by(
             desc(Measurement.time_of_measure)).first())
     print(z)
 
